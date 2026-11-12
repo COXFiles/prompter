@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>X-Files Prompter</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Prompter">
+<meta name="theme-color" content="#0b0f0d">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<style>
+:root{color-scheme:dark;--bg:#0b0f0d;--panel:#151b18;--line:#2a332e;--fg:#f3f6f1;--dim:#6f7c74;--accent:#8fe3a4;--warn:#ffcf70;--bad:#ff8f7a;--size:34px;
+--font:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);display:flex;flex-direction:column;overflow:hidden;
+padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-text-size-adjust:100%}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{flex:none;background:var(--panel);border-bottom:1px solid var(--line);padding-top:8px;padding-bottom:8px;display:flex;gap:8px;align-items:center}
+.chips{flex:1;min-width:0;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;font-weight:600;font-size:14px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;color:var(--dim);white-space:nowrap}
+.chip[aria-pressed="true"]{color:var(--bg);background:var(--accent);border-color:var(--accent)}
+.edit{flex:none;font-size:14px;font-weight:600;padding:8px 12px;border:1px solid var(--line);border-radius:10px}
+.stage{flex:1;min-height:0;position:relative}
+.scroller{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.scroller::-webkit-scrollbar{display:none}
+.script{max-width:900px;margin:0 auto;padding-top:34vh;padding-bottom:70vh;font-size:var(--size);line-height:1.38;font-weight:600}
+.script p{margin:0 0 .9em}
+.w{transition:color .15s}
+.script.voice .w.said{color:var(--dim)}
+.script.voice .w.now{color:var(--accent)}
+.tag{color:var(--warn)}
+.mark{position:absolute;left:0;right:0;top:34vh;border-top:2px solid var(--accent);opacity:.35;pointer-events:none}
+.mark::before{content:"";position:absolute;left:0;top:-7px;border:6px solid transparent;border-left-color:var(--accent)}
+.fade{position:absolute;left:0;right:0;height:16vh;pointer-events:none}
+.fade.t{top:0;background:linear-gradient(var(--bg),transparent)}
+.fade.b{bottom:0;background:linear-gradient(transparent,var(--bg))}
+.status{flex:none;min-height:22px;font-size:13px;color:var(--dim);text-align:center;padding-top:5px;background:var(--panel);border-top:1px solid var(--line)}
+.status.on{color:var(--accent)} .status.bad{color:var(--bad)}
+.bar{flex:none;background:var(--panel);display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 10px;padding-top:8px;padding-bottom:10px}
+.btn{font-weight:600;font-size:15px;min-height:46px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.btn.go{background:var(--accent);color:var(--bg);border-color:var(--accent);min-width:92px}
+.btn.go:disabled{opacity:.4}
+.btn.voice[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.grp{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.grp button{min-width:44px;min-height:46px;font-size:19px;font-weight:600}
+.grp span{font-size:12px;color:var(--dim);min-width:56px;text-align:center;font-variant-numeric:tabular-nums}
+/* editor sheet */
+.sheet{position:fixed;inset:0;background:var(--bg);z-index:20;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.sheet h2{margin:0;font-size:18px}
+.sheet .body{flex:1;min-height:0;overflow-y:auto;padding-top:14px;padding-bottom:20px;display:flex;flex-direction:column;gap:10px}
+.sheet label{font-size:13px;color:var(--dim)}
+.sheet input,.sheet textarea{width:100%;font:inherit;font-size:16px;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+.sheet textarea{flex:1;min-height:40vh;line-height:1.45;resize:none}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:6px 6px 6px 12px;background:var(--panel)}
+.item b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}
+.item button{min-height:40px;padding:0 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-weight:600}
+.danger{color:var(--bad)}
+.note{font-size:13px;color:var(--dim);line-height:1.45}
+</style>
+</head>
+<body>
+<div class="top gut"><div class="chips" id="chips" role="group" aria-label="Scripts"></div><button class="edit" id="openScripts" type="button">Scripts</button></div>
+
+<div class="stage">
+  <div class="scroller gut" id="scroller"><div class="script" id="script"></div></div>
+  <div class="fade t"></div><div class="fade b"></div><div class="mark"></div>
+</div>
+
+<div class="status gut" id="status">Tap Start, or tap the script, to scroll.</div>
+<div class="bar gut">
+  <button class="btn" id="restart" type="button">Top</button>
+  <div class="grp" aria-label="Scroll speed"><button id="slower" type="button" aria-label="Slower">&minus;</button><span id="speedLbl"></span><button id="faster" type="button" aria-label="Faster">+</button></div>
+  <button class="btn go" id="play" type="button">Start</button>
+  <div class="grp" aria-label="Text size"><button id="smaller" type="button" aria-label="Smaller text">A&minus;</button><span id="sizeLbl"></span><button id="bigger" type="button" aria-label="Bigger text">A+</button></div>
+  <button class="btn voice" id="voice" type="button" aria-pressed="false" hidden>Follow my voice</button>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <header class="gut"><h2 id="sheetTitle">Scripts</h2><button class="btn" id="closeSheet" type="button">Done</button></header>
+  <div class="body gut" id="listView">
+    <div class="row"><button class="btn go" id="newScript" type="button">New script</button><button class="btn" id="restore" type="button">Restore the six book scripts</button></div>
+    <div class="list" id="list"></div>
+    <p class="note">Scripts are saved on this phone only. Leave a blank line between paragraphs.</p>
+  </div>
+  <div class="body gut" id="editView" hidden>
+    <label for="edName">Name</label><input id="edName" type="text" maxlength="40" autocomplete="off">
+    <label for="edText">Script</label><textarea id="edText" spellcheck="true"></textarea>
+    <div class="row"><button class="btn go" id="saveScript" type="button">Save</button><button class="btn" id="cancelEdit" type="button">Cancel</button></div>
+  </div>
+</div>
+
+<script>
+const DEFAULTS = [
+  { name: "1 Greys", lines: [
+    "The most famous alien star map fell apart. And the woman who made it admitted it.",
+    "In 1961, Betty Hill said the beings who took her showed her a star map. She drew it from memory.",
+    "A schoolteacher named Marjorie Fish spent about five years trying to match that drawing to the real sky. She landed on Zeta Reticuli. That's where the name \"Zeta Reticulans\" comes from.",
+    "Then, in the early '90s, better star measurements broke her match. And in 2008, Fish herself said the correlation was unlikely.",
+    "So in my book, the star map is tagged CLAIMED. The Zeta Reticuli match is tagged DISPUTED. By the person who made it.",
+    "It's in my new book, The Field Guide to Alien Races." ] },
+  { name: "2 Nordics", lines: [
+    "In 1952, a man said he met a visitor from Venus in the California desert.",
+    "His name was George Adamski. November 20th, near Desert Center. He said the visitor was called Orthon. Long blond hair, a one-piece suit, and a message for us: stop testing nuclear weapons.",
+    "Here's the problem. One of the friends who signed a statement backing him up later said he never saw a craft, or a being. Most researchers think Adamski was at least embellishing.",
+    "But he set the template. Tall, human-looking, worried about our weapons. And people have been describing that same visitor ever since.",
+    "So was he a pioneer or a showman? Tell me below.",
+    "It's in my new book, The Field Guide to Alien Races." ] },
+  { name: "3 Insectoids", lines: [
+    "Of every being in my book, this is the one people least want to meet.",
+    "Picture a praying mantis, standing upright. Six or seven feet tall. A long triangular head, and huge dark eyes set far apart.",
+    "In abduction accounts, they're not the ones grabbing people. The small Greys do that. The mantis beings stand back and watch.",
+    "Witnesses call them supervisors. Doctors. Some say they talk mind to mind. The historian David Jacobs recorded abductees who put them at the very top of the chain of command.",
+    "Now, all of that is tagged CLAIMED. Nothing confirmed. But a lot of people who never met each other describe the same thing.",
+    "It's in my new book, The Field Guide to Alien Races." ] },
+  { name: "4 Reptilians", lines: [
+    "A 22-year-old Nebraska cop pulled up on what he thought was a truck stopped on the highway.",
+    "December 3rd, 1967. Ashland, Nebraska, about 2:30 in the morning. Officer Herbert Schirmer. It wasn't a truck. He said it was a glowing, football-shaped craft.",
+    "He told investigators he may have lost about 20 minutes.",
+    "The Air Force-funded Condon study looked at his case within days. Under hypnosis, he described beings in tight uniforms, with an emblem on the chest. A winged serpent.",
+    "The Condon report wasn't convinced. And critics question some of the later hypnosis sessions.",
+    "So I tag it CLAIMED, and I give you both sides.",
+    "It's in my new book, The Field Guide to Alien Races." ] },
+  { name: "5 Tall Whites", lines: [
+    "A former defense minister of Canada said this out loud.",
+    "It starts with a man named Charles Hall. He says that in the 1960s, when he was an Air Force weather observer out in the Nevada desert, he met them. Tall. Very pale. White hair. And working with the Air Force, he says.",
+    "One man. No documents. Normally that's a short entry.",
+    "Then Paul Hellyer, Canada's former Minister of National Defence, said there are \"live ETs on earth at this present time.\" And in a later interview, he named the Tall Whites, working with the U.S. Air Force in Nevada.",
+    "Hall is still the only firsthand source. So it's tagged CLAIMED.",
+    "It's in my new book, The Field Guide to Alien Races." ] },
+  { name: "6 Orbs", lines: [
+    "This is the one you're most likely to see yourself.",
+    "Every other being in my book has a body. This one might not.",
+    "Glowing balls of light that hover, dart, split apart, and react to the people watching them.",
+    "In World War II, Allied crews called them foo fighters. In December 1944, Allied headquarters put out a press release calling them a \"new German weapon.\" Then it turned out German and Japanese pilots were seeing them too.",
+    "So the lights are tagged DOCUMENTED. Seen, filmed, studied. What they are is still CLAIMED.",
+    "My guess? A lot of them aren't beings at all. They're somebody's drones.",
+    "It's in my new book, The Field Guide to Alien Races." ] }
+];
+const TAGS=/^(CLAIMED|DISPUTED|DOCUMENTED|LORE)\b/;
+const $=id=>document.getElementById(id);
+const scroller=$("scroller"),scriptEl=$("script"),statusEl=$("status");
+const store={get(k,d){try{const v=localStorage.getItem("xfp_"+k);return v===null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem("xfp_"+k,JSON.stringify(v))}catch(e){}}};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const defaults=()=>DEFAULTS.map((s,i)=>({id:"book"+(i+1),name:s.name,text:s.lines.join("\n\n")}));
+
+let scripts=store.get("scripts",null); if(!Array.isArray(scripts)||!scripts.length) scripts=defaults();
+let cur=Math.min(scripts.length-1,Math.max(0,store.get("cur",0)));
+let speed=store.get("speed",5), size=store.get("size",34);
+let playing=false,raf=0,last=0,pos=0, words=[],norm=[],idx=0, wake=null;
+let rec=null,voiceOn=false,finals="",restartTimer=0,editing=null,pendingDelete=null;
+
+const clean=s=>s.toLowerCase().replace(/[^a-z0-9]/g,"");
+function setStatus(t,cls){statusEl.textContent=t;statusEl.className="status gut"+(cls?" "+cls:"")}
+function saveScripts(){store.set("scripts",scripts);store.set("cur",cur)}
+
+function renderChips(){const box=$("chips");box.textContent="";scripts.forEach((s,i)=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=s.name;b.setAttribute("aria-pressed",String(i===cur));b.addEventListener("click",()=>{cur=i;store.set("cur",cur);stopAll();renderChips();renderScript()});box.appendChild(b)});
+  const on=box.querySelector('[aria-pressed="true"]'); if(on&&on.scrollIntoView) on.scrollIntoView({inline:"center",block:"nearest"})}
+
+function renderScript(){scriptEl.textContent="";words=[];norm=[];
+  const s=scripts[cur]; if(!s){return}
+  s.text.split(/\n\s*\n|\n/).map(x=>x.trim()).filter(Boolean).forEach(line=>{const p=document.createElement("p");
+    line.split(/\s+/).forEach(tok=>{const sp=document.createElement("span");sp.className="w"+(TAGS.test(tok)?" tag":"");sp.textContent=tok;const n=words.length;
+      sp.addEventListener("click",ev=>{if(voiceOn){ev.stopPropagation();setIdx(n,true)}});
+      p.appendChild(sp);p.appendChild(document.createTextNode(" "));words.push(sp);norm.push(clean(tok))});
+    scriptEl.appendChild(p)});
+  idx=0;pos=0;scroller.scrollTop=0;paint()}
+function paint(){for(let i=0;i<words.length;i++){const c=words[i].classList;c.toggle("said",i<idx);c.toggle("now",i===idx)}}
+function setIdx(n,smooth){idx=Math.max(0,Math.min(words.length,n));paint();const el=words[Math.min(idx,words.length-1)];if(!el)return;
+  const pad=parseFloat(getComputedStyle(scriptEl).paddingTop)||0;const target=Math.max(0,el.offsetTop-scriptEl.offsetTop-pad);
+  scroller.scrollTo({top:target,behavior:smooth?"smooth":"auto"});
+  if(idx>=words.length)setStatus("End of script. Hold a second, then stop recording.","on")}
+
+/* steady scroll */
+function pxPerSec(){return 8+speed*7*(size/34)}
+function tick(t){if(!playing)return;if(last){pos+=pxPerSec()*(t-last)/1000;const max=scroller.scrollHeight-scroller.clientHeight;
+    if(pos>=max){scroller.scrollTop=max;pause();setStatus("End of script. Hold a second, then stop recording.");return}scroller.scrollTop=pos}
+  last=t;raf=requestAnimationFrame(tick)}
+async function keepAwake(){try{if(navigator.wakeLock&&!wake){wake=await navigator.wakeLock.request("screen");wake.addEventListener("release",()=>{wake=null})}}catch(e){}}
+function play(){if(voiceOn)return;playing=true;last=0;pos=scroller.scrollTop;$("play").textContent="Pause";setStatus("Scrolling. Tap the script to pause.","on");keepAwake();raf=requestAnimationFrame(tick)}
+function pause(){const was=playing;playing=false;cancelAnimationFrame(raf);$("play").textContent="Start";if(was&&!voiceOn)setStatus("Paused. Tap Start, or tap the script, to go on.")}
+function stopAll(){pause();if(voiceOn)stopVoice()}
+
+/* voice follow */
+function follow(text){const heard=text.split(/\s+/).map(clean).filter(Boolean);if(!heard.length||idx>=words.length)return;
+  const tail=heard.slice(-4),L=tail.length,end=Math.min(words.length-1,idx+18);
+  for(let p=idx;p<=end;p++){if(norm[p]!==tail[L-1])continue;let score=1;for(let k=1;k<L;k++){if(p-k>=0&&norm[p-k]===tail[L-1-k])score++}
+    if(score>=2||p-idx<=2){setIdx(p+1,true);return}}}
+function voiceUI(on){voiceOn=on;const v=$("voice");v.setAttribute("aria-pressed",String(on));v.textContent=on?"Stop listening":"Follow my voice";scriptEl.classList.toggle("voice",on);$("play").disabled=on}
+function startVoice(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;
+  pause();finals="";if(idx>=words.length)setIdx(0,false);
+  try{rec=new SR();rec.lang="en-US";rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=1}catch(e){setStatus("Voice follow couldn't start on this phone. Use Start instead.","bad");return}
+  rec.onstart=()=>{setStatus("Listening. Read at your own pace; the script follows you.","on")};
+  rec.onresult=e=>{let interim="";for(let i=e.resultIndex;i<e.results.length;i++){const r=e.results[i];if(r.isFinal)finals=(finals+" "+r[0].transcript).slice(-400);else interim+=" "+r[0].transcript}
+    follow(finals+" "+interim)};
+  rec.onerror=e=>{const c=e.error;if(c==="not-allowed"||c==="service-not-allowed"){voiceUI(false);rec=null;setStatus("Microphone or Speech Recognition is turned off for this page. Use Start, or allow it in Settings.","bad")}
+    else if(c==="audio-capture"){voiceUI(false);rec=null;setStatus("No microphone found. If a wireless mic is connected to the phone, try unplugging it.","bad")}};
+  rec.onend=()=>{if(voiceOn&&rec){clearTimeout(restartTimer);restartTimer=setTimeout(()=>{try{rec.start()}catch(e){}},250)}};
+  voiceUI(true);keepAwake();setStatus("Starting the microphone…","on");
+  try{rec.start()}catch(e){voiceUI(false);setStatus("Voice follow couldn't start. Use Start instead.","bad")}}
+function stopVoice(){voiceUI(false);clearTimeout(restartTimer);const r=rec;rec=null;try{r&&r.stop()}catch(e){}setStatus("Stopped listening.")}
+
+/* controls */
+function labels(){$("speedLbl").textContent="Speed "+speed;$("sizeLbl").textContent=size+" px";document.documentElement.style.setProperty("--size",size+"px")}
+$("play").addEventListener("click",()=>playing?pause():play());
+scroller.addEventListener("click",()=>{if(!voiceOn)(playing?pause():play())});
+$("restart").addEventListener("click",()=>{pause();pos=0;finals="";setIdx(0,false);scroller.scrollTop=0;if(!voiceOn)setStatus("Back at the top.")});
+$("slower").addEventListener("click",()=>{speed=Math.max(1,speed-1);store.set("speed",speed);labels()});
+$("faster").addEventListener("click",()=>{speed=Math.min(12,speed+1);store.set("speed",speed);labels()});
+$("smaller").addEventListener("click",()=>{size=Math.max(22,size-2);store.set("size",size);labels()});
+$("bigger").addEventListener("click",()=>{size=Math.min(64,size+2);store.set("size",size);labels()});
+$("voice").addEventListener("click",()=>voiceOn?stopVoice():startVoice());
+scroller.addEventListener("scroll",()=>{if(!playing)pos=scroller.scrollTop},{passive:true});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){pause();if(voiceOn)stopVoice()}});
+
+/* script manager */
+function showList(){$("sheetTitle").textContent="Scripts";$("listView").hidden=false;$("editView").hidden=true;pendingDelete=null;
+  const box=$("list");box.textContent="";scripts.forEach((s,i)=>{const row=document.createElement("div");row.className="item";const b=document.createElement("b");b.textContent=s.name;row.appendChild(b);
+    const e=document.createElement("button");e.type="button";e.textContent="Edit";e.addEventListener("click",()=>openEdit(i));row.appendChild(e);
+    const d=document.createElement("button");d.type="button";d.className="danger";d.textContent="Delete";d.addEventListener("click",()=>{if(pendingDelete===i){scripts.splice(i,1);if(!scripts.length)scripts=defaults();cur=Math.min(cur,scripts.length-1);saveScripts();showList()}else{pendingDelete=i;showListKeep(i)}});row.appendChild(d);box.appendChild(row)})}
+function showListKeep(i){const rows=$("list").children;for(let k=0;k<rows.length;k++){rows[k].lastChild.textContent=k===i?"Tap again to delete":"Delete"}}
+function openEdit(i){editing=i;$("sheetTitle").textContent=i===null?"New script":"Edit script";$("listView").hidden=true;$("editView").hidden=false;$("edName").value=i===null?"":scripts[i].name;$("edText").value=i===null?"":scripts[i].text}
+$("openScripts").addEventListener("click",()=>{stopAll();$("sheet").hidden=false;showList()});
+$("closeSheet").addEventListener("click",()=>{$("sheet").hidden=true;renderChips();renderScript()});
+$("newScript").addEventListener("click",()=>openEdit(null));
+$("cancelEdit").addEventListener("click",showList);
+$("saveScript").addEventListener("click",()=>{const name=$("edName").value.trim()||"Untitled",text=$("edText").value.trim();if(!text){$("edText").focus();return}
+  if(editing===null){scripts.push({id:uid(),name,text});cur=scripts.length-1}else{scripts[editing].name=name;scripts[editing].text=text;cur=editing}saveScripts();showList()});
+$("restore").addEventListener("click",()=>{const have=new Set(scripts.map(s=>s.id));defaults().forEach(d=>{const k=scripts.findIndex(s=>s.id===d.id);if(k>=0)scripts[k]=d;else scripts.push(d)});saveScripts();showList()});
+
+labels();renderChips();renderScript();
+if(window.SpeechRecognition||window.webkitSpeechRecognition){$("voice").hidden=false;setStatus("Tap Follow my voice and start reading, or tap Start for steady scroll.")}
+else setStatus("This browser has no speech recognition, so it scrolls at a steady speed. Tap Start.");
+if("serviceWorker" in navigator&&location.protocol==="https:"){navigator.serviceWorker.register("sw.js").catch(()=>{})}
+</script>
+</body>
+</html>
